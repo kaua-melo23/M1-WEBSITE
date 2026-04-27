@@ -1,0 +1,60 @@
+<button onclick="toggleSidebar()" class="fixed left-4 top-4 text-white z-[60] bg-red-600 p-2 rounded-lg shadow-2xl active:scale-90 transition-all">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16"></path>
+    </svg>
+</button>
+
+<div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/60 z-[90] hidden transition-opacity"></div>
+
+<div id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-white z-[100] transform -translate-x-full transition-transform duration-300 ease-in-out shadow-2xl rounded-r-[2rem]">
+    <div class="p-6">
+        <div class="flex justify-between items-center mb-10">
+            <h3 class="font-black italic text-xl text-red-600 uppercase tracking-tighter">Cardápio</h3>
+            <button onclick="toggleSidebar()" class="text-gray-400 font-bold text-xl">×</button>
+        </div>
+        
+        <nav class="space-y-3">
+            {% for cat in categorias %}
+            <a href="javascript:void(0)" 
+               onclick="navegarParaCategoria('{{ cat.nome|lower|replace('ç','c')|replace('õ','o')|replace('ã','a')|replace(' ','-') }}')" 
+               class="block p-4 bg-gray-50 hover:bg-red-50 rounded-2xl font-bold text-gray-700 uppercase italic text-xs border-l-4 border-transparent hover:border-red-600 transition-all">
+                {{ cat.emoji }} {{ cat.nome }}
+            </a>
+            {% endfor %}
+        </nav>
+    </div>
+</div>
+
+<script>
+    // Função para abrir/fechar o menu lateral
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        sidebar.classList.toggle('-translate-x-full');
+        overlay.classList.toggle('hidden');
+    }
+
+    // Função para navegar até a categoria e GARANTIR que ela abra
+    function navegarParaCategoria(idCat) {
+        // 1. Fecha o menu lateral
+        toggleSidebar();
+
+        // 2. Tenta encontrar a section e o details (id gerado no cardápio)
+        const secao = document.getElementById('section-' + idCat);
+        const details = document.getElementById('details-' + idCat);
+
+        if (secao) {
+            // 3. Se houver um elemento <details> dentro, força ele a abrir
+            if (details) {
+                details.open = true;
+            } else {
+                // Caso não use ID no details, procura o primeiro details dentro da section
+                const d = secao.querySelector('details');
+                if (d) d.open = true;
+            }
+
+            // 4. Faz o scroll suave até a seção
+            secao.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+</script>

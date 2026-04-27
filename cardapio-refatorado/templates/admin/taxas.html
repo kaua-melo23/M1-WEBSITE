@@ -1,0 +1,215 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Logística de Entrega{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
+        <div>
+            <h1 class="text-3xl font-black italic text-slate-800 uppercase tracking-tighter flex items-center gap-3">
+                <span class="bg-blue-600 text-white p-2 rounded-xl shadow-lg shadow-blue-200">📍</span>
+                Zonas de Entrega
+            </h1>
+            <p class="text-slate-400 font-medium mt-1 ml-1">Gerencie bairros e valores de frete para o carrinho.</p>
+        </div>
+        
+        <div class="hidden md:flex bg-white px-4 py-2 rounded-2xl shadow-sm border border-gray-100 items-center gap-2">
+            <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sincronizado com SQLite</span>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <div class="lg:col-span-4">
+            <div class="bg-white p-8 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-gray-50 sticky top-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 id="form-title" class="text-lg font-black text-slate-800 flex items-center gap-2 italic uppercase">
+                        Novo Registro
+                    </h3>
+                    <button id="btn-cancel-edit" onclick="resetForm()" class="hidden text-[10px] font-black text-red-500 uppercase hover:underline">Cancelar</button>
+                </div>
+                
+                <form id="form-taxa" class="space-y-6">
+                    <input type="hidden" id="taxa-id"> <div>
+                        <label class="text-[11px] font-black uppercase text-slate-400 ml-2 mb-2 block">Nome do Bairro</label>
+                        <input type="text" id="bairro" 
+                               class="w-full bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl p-4 transition-all outline-none font-bold text-slate-700 placeholder:text-slate-300" 
+                               placeholder="Ex: Centro" required>
+                    </div>
+                    
+                    <div>
+                        <div class="flex justify-between items-center ml-2 mb-2">
+                            <label class="text-[11px] font-black uppercase text-slate-400 block">Taxa de Frete (R$)</label>
+                            <label class="flex items-center gap-2 cursor-pointer group">
+                                <input type="checkbox" id="taxa-gratis" onchange="toggleGratis(this)" class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                <span class="text-[10px] font-black text-green-600 uppercase italic group-hover:underline">Grátis</span>
+                            </label>
+                        </div>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-300">R$</span>
+                            <input type="number" id="taxa" step="0.01" 
+                                   class="w-full bg-slate-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl p-4 pl-12 transition-all outline-none font-bold text-slate-700" 
+                                   placeholder="0.00" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="btn-submit"
+                            class="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase shadow-xl shadow-slate-200 hover:bg-blue-600 active:scale-95 transition-all flex items-center justify-center gap-2 group">
+                        <span>Salvar Bairro</span>
+                        <span class="group-hover:translate-x-1 transition-transform">→</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="lg:col-span-8">
+            <div class="bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 border border-gray-50 overflow-hidden">
+                <div class="p-6 bg-slate-50/50 border-b border-gray-100 flex justify-between items-center">
+                    <span class="text-[11px] font-black text-slate-400 uppercase tracking-widest italic">Localidades Ativas</span>
+                    <span id="contador-taxas" class="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs font-bold">0</span>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="text-slate-400 border-b border-gray-50">
+                                <th class="px-8 py-5 text-[11px] font-black uppercase italic">Bairro</th>
+                                <th class="px-8 py-5 text-[11px] font-black uppercase italic">Taxa</th>
+                                <th class="px-8 py-5 text-[11px] font-black uppercase italic text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-taxas" class="divide-y divide-gray-50 text-slate-700">
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="empty-state" class="hidden p-20 text-center">
+                    <div class="text-5xl mb-4">🚚</div>
+                    <p class="text-slate-400 font-bold italic">Nenhum bairro cadastrado no sistema.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Controle de Taxa Grátis
+    function toggleGratis(checkbox) {
+        const inputTaxa = document.getElementById('taxa');
+        if (checkbox.checked) {
+            inputTaxa.value = "0.00";
+            inputTaxa.readOnly = true;
+            inputTaxa.classList.add('opacity-50', 'bg-green-50');
+        } else {
+            inputTaxa.readOnly = false;
+            inputTaxa.classList.remove('opacity-50', 'bg-green-50');
+        }
+    }
+
+    // Carregar as taxas
+    function carregarTaxas() {
+        fetch('/api/taxas')
+            .then(res => res.json())
+            .then(dados => {
+                const corpoTabela = document.getElementById('tabela-taxas');
+                const empty = document.getElementById('empty-state');
+                const contador = document.getElementById('contador-taxas');
+                
+                contador.innerText = dados.length;
+                corpoTabela.innerHTML = '';
+                
+                if (dados.length === 0) {
+                    empty.classList.remove('hidden');
+                } else {
+                    empty.classList.add('hidden');
+                    dados.forEach(item => {
+                        const isFree = item.taxa <= 0;
+                        corpoTabela.innerHTML += `
+                            <tr class="group hover:bg-slate-50/80 transition-all duration-300">
+                                <td class="px-8 py-6">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                                            🏙️
+                                        </div>
+                                        <span class="font-bold">${item.bairro}</span>
+                                    </div>
+                                </td>
+                                <td class="px-8 py-6 font-black ${isFree ? 'text-green-600' : 'text-slate-700'}">
+                                    ${isFree ? 'GRÁTIS' : 'R$ ' + item.taxa.toFixed(2)}
+                                </td>
+                                <td class="px-8 py-6 text-right space-x-2">
+                                    <button onclick='editarTaxa(${JSON.stringify(item)})' 
+                                            class="text-slate-300 hover:text-blue-500 p-2 rounded-xl hover:bg-blue-50 transition-all" title="Editar">
+                                        📝
+                                    </button>
+                                    <button onclick="deletarTaxa(${item.id})" 
+                                            class="text-slate-300 hover:text-red-500 p-2 rounded-xl hover:bg-red-50 transition-all" title="Excluir">
+                                        <svg class="w-5 h-5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+            });
+    }
+
+    // Prepara formulário para edição
+    function editarTaxa(item) {
+        document.getElementById('taxa-id').value = item.id;
+        document.getElementById('bairro').value = item.bairro;
+        document.getElementById('taxa').value = item.taxa;
+        document.getElementById('form-title').innerText = "Editar Registro";
+        document.getElementById('btn-submit').querySelector('span').innerText = "Atualizar Registro";
+        document.getElementById('btn-cancel-edit').classList.remove('hidden');
+        
+        const checkGratis = document.getElementById('taxa-gratis');
+        checkGratis.checked = item.taxa <= 0;
+        toggleGratis(checkGratis);
+        
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Reseta o formulário
+    function resetForm() {
+        document.getElementById('form-taxa').reset();
+        document.getElementById('taxa-id').value = '';
+        document.getElementById('form-title').innerText = "Novo Registro";
+        document.getElementById('btn-submit').querySelector('span').innerText = "Salvar Bairro";
+        document.getElementById('btn-cancel-edit').classList.add('hidden');
+        toggleGratis(document.getElementById('taxa-gratis'));
+    }
+
+    // Enviar (Cria ou Atualiza)
+    document.getElementById('form-taxa').onsubmit = function(e) {
+        e.preventDefault();
+        const id = document.getElementById('taxa-id').value;
+        const formData = new FormData();
+        formData.append('bairro', document.getElementById('bairro').value);
+        formData.append('taxa', document.getElementById('taxa').value);
+
+        // Se tiver ID, usa rota de editar, senão usa rota normal
+        const url = id ? `/api/taxas/editar/${id}` : '/api/taxas';
+
+        fetch(url, {
+            method: 'POST',
+            body: formData
+        }).then(() => {
+            resetForm();
+            carregarTaxas();
+        });
+    };
+
+    function deletarTaxa(id) {
+        if(confirm("Deseja realmente excluir este bairro?")) {
+            fetch(`/api/taxas/${id}`, { method: 'DELETE' })
+                .then(() => carregarTaxas());
+        }
+    }
+
+    carregarTaxas();
+</script>
+{% endblock %}

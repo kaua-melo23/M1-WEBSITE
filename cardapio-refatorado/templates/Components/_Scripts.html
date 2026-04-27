@@ -1,0 +1,253 @@
+<script>
+    let carrinho = JSON.parse(localStorage.getItem('carrinho_lanchonete')) || [];
+    let total = 0;
+
+    // Cache de complementos carregado ao iniciar
+    let complementosPorProduto = {};
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        atualizarNumerosDock();
+        await preCarregarComplementos();
+    });
+
+    // ── Pré-carrega todos os complementos do cardápio em 1 request ──
+    async function preCarregarComplementos() {
+        try {
+            const btns = document.querySelectorAll('[data-produto-id]');
+            const ids = [...new Set([...btns].map(b => b.dataset.produtoId))];
+            if (!ids.length) return;
+            const res = await fetch('/api/complementos/produtos/bulk?ids=' + ids.join(','));
+            complementosPorProduto = await res.json();
+        } catch(e) {
+            console.warn('Não foi possível carregar complementos:', e);
+        }
+    }
+
+    // ── PONTO DE ENTRADA: botão "+" do produto ──────────────────────
+    async function adicionarProduto(nome, preco, idProduto) {
+        const grupos = complementosPorProduto[idProduto];
+        if (grupos && grupos.length > 0) {
+            abrirModalComplementos(nome, preco, idProduto, grupos);
+        } else {
+            // Produto sem complementos → adiciona direto
+            add(nome, preco, idProduto, []);
+        }
+    }
+
+    // ── ADICIONAR AO CARRINHO (com ou sem complementos) ─────────────
+    function add(nome, preco, idProduto, complementos = []) {
+        const extraTotal = complementos.reduce((s, c) => s + (c.preco_unitario * c.quantidade), 0);
+        const novoItem = {
+            id_instancia: Date.now() + Math.random(),
+            id_produto: idProduto,
+            nome: nome,
+            preco: parseFloat(preco) + extraTotal,
+            preco_base: parseFloat(preco),
+            quantidade: 1,
+            obs: "",
+            complementos: complementos   // [{ item_id, nome, quantidade, preco_unitario }]
+        };
+        carrinho.push(novoItem);
+        salvarCarrinho();
+        if (window.navigator.vibrate) window.navigator.vibrate(40);
+        const dock = document.getElementById('cart-dock');
+        if(dock) dock.classList.remove('translate-y-full');
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // MODAL DE COMPLEMENTOS
+    // ══════════════════════════════════════════════════════════════
+
+    let _compProdutoAtual = null;  // { nome, preco, idProduto, grupos }
+
+    function abrirModalComplementos(nome, preco, idProduto, grupos) {
+        _compProdutoAtual = { nome, preco: parseFloat(preco), idProduto, grupos };
+
+        document.getElementById('comp-produto-nome').textContent = nome;
+        document.getElementById('comp-preco-base').textContent = `R$ ${parseFloat(preco).toFixed(2)}`;
+        document.getElementById('comp-preco-extra').textContent = 'R$ 0,00';
+        document.getElementById('comp-extra-row').classList.add('hidden');
+        document.getElementById('comp-preco-total').textContent = `R$ ${parseFloat(preco).toFixed(2)}`;
+
+        renderizarGruposModal(grupos);
+        document.getElementById('modal-complementos').classList.remove('hidden');
+    }
+
+    function fecharModalComplementos() {
+        document.getElementById('modal-complementos').classList.add('hidden');
+        _compProdutoAtual = null;
+    }
+
+    function renderizarGruposModal(grupos) {
+        const container = document.getElementById('comp-grupos-container');
+        container.innerHTML = '';
+
+        grupos.forEach(grupo => {
+            const isAdicional = grupo.tipo === 'adicional';
+            const section = document.createElement('div');
+            section.innerHTML = `
+                <div class="mb-3">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="font-black text-gray-800 uppercase text-sm tracking-tight">${grupo.grupo_nome}</span>
+                        <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${isAdicional ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-700'}">
+                            ${isAdicional ? '💰 Pago' : '✅ Incluso'}
+                        </span>
+                        ${grupo.obrigatorio ? '<span class="text-[10px] font-black text-red-500">*obrigatório</span>' : ''}
+                    </div>
+                    <div class="space-y-2">
+                        ${grupo.itens.map(item => renderItemComplemento(item, isAdicional)).join('')}
+                    </div>
+                </div>
+            `;
+            container.appendChild(section);
+        });
+    }
+
+    function renderItemComplemento(item, isAdicional) {
+        if (isAdicional) {
+            // Adicional pago → contador de quantidade
+            return `
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
+                    <div>
+                        <span class="font-bold text-sm text-gray-800">${item.nome}</span>
+                        <span class="text-orange-600 font-black text-xs ml-2">+R$ ${item.preco_adicional.toFixed(2)}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="alterarQtdComp(this, -1)" class="w-7 h-7 rounded-full bg-gray-200 font-black text-gray-600 flex items-center justify-center hover:bg-red-100 hover:text-red-600 transition">−</button>
+                        <span class="w-6 text-center font-black text-sm" data-qty="0"
+                              data-item-id="${item.id}"
+                              data-item-nome="${item.nome}"
+                              data-preco="${item.preco_adicional}">0</span>
+                        <button onclick="alterarQtdComp(this, 1)" class="w-7 h-7 rounded-full bg-gray-200 font-black text-gray-600 flex items-center justify-center hover:bg-green-100 hover:text-green-600 transition">+</button>
+                    </div>
+                </div>`;
+        } else {
+            // Incluso → checkbox
+            return `
+                <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 cursor-pointer hover:bg-green-50 hover:border-green-200 transition">
+                    <input type="checkbox" 
+                           data-item-id="${item.id}"
+                           data-item-nome="${item.nome}"
+                           data-preco="0"
+                           onchange="recalcularTotal()"
+                           class="w-4 h-4 accent-red-600">
+                    <span class="font-bold text-sm text-gray-800">${item.nome}</span>
+                    <span class="text-green-600 font-black text-xs ml-auto">Incluso</span>
+                </label>`;
+        }
+    }
+
+    function alterarQtdComp(btn, delta) {
+        // Encontra o span de quantidade irmão
+        const parent = btn.parentElement;
+        const span = parent.querySelector('[data-qty]');
+        let qty = parseInt(span.dataset.qty) + delta;
+        if (qty < 0) qty = 0;
+        span.dataset.qty = qty;
+        span.textContent = qty;
+        recalcularTotal();
+    }
+
+    function recalcularTotal() {
+        if (!_compProdutoAtual) return;
+        let extra = 0;
+
+        // Adicionais pagos (spans com data-qty)
+        document.querySelectorAll('#comp-grupos-container [data-qty]').forEach(span => {
+            const qty = parseInt(span.dataset.qty);
+            const preco = parseFloat(span.dataset.preco);
+            if (qty > 0) extra += qty * preco;
+        });
+
+        const extraRow = document.getElementById('comp-extra-row');
+        if (extra > 0) {
+            extraRow.classList.remove('hidden');
+            document.getElementById('comp-preco-extra').textContent = `R$ ${extra.toFixed(2)}`;
+        } else {
+            extraRow.classList.add('hidden');
+        }
+        const total = _compProdutoAtual.preco + extra;
+        document.getElementById('comp-preco-total').textContent = `R$ ${total.toFixed(2)}`;
+    }
+
+    function confirmarComplementos() {
+        if (!_compProdutoAtual) return;
+
+        const complementosSelecionados = [];
+
+        // Incluso: checkboxes marcados
+        document.querySelectorAll('#comp-grupos-container input[type=checkbox]:checked').forEach(chk => {
+            complementosSelecionados.push({
+                item_id: parseInt(chk.dataset.itemId),
+                nome: chk.dataset.itemNome,
+                quantidade: 1,
+                preco_unitario: 0
+            });
+        });
+
+        // Adicional pago: qty > 0
+        document.querySelectorAll('#comp-grupos-container [data-qty]').forEach(span => {
+            const qty = parseInt(span.dataset.qty);
+            if (qty > 0) {
+                complementosSelecionados.push({
+                    item_id: parseInt(span.dataset.itemId),
+                    nome: span.dataset.itemNome,
+                    quantidade: qty,
+                    preco_unitario: parseFloat(span.dataset.preco)
+                });
+            }
+        });
+
+        add(_compProdutoAtual.nome, _compProdutoAtual.preco, _compProdutoAtual.idProduto, complementosSelecionados);
+        fecharModalComplementos();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // CARRINHO
+    // ══════════════════════════════════════════════════════════════
+
+    function salvarCarrinho() {
+        localStorage.setItem('carrinho_lanchonete', JSON.stringify(carrinho));
+        atualizarNumerosDock();
+    }
+
+    function atualizarNumerosDock() {
+        total = carrinho.reduce((acc, item) => acc + (item.preco * (item.quantidade || 1)), 0);
+        const totalVal = document.getElementById('total-val');
+        const cartTotal = document.getElementById('cart-total');
+        const cartCount = document.getElementById('cart-count');
+        if (totalVal) totalVal.innerText = total.toFixed(2);
+        if (cartTotal) cartTotal.innerText = `R$ ${total.toFixed(2)}`;
+        if (cartCount) cartCount.innerText = carrinho.length;
+        const dock = document.getElementById('cart-dock');
+        if (dock) {
+            if (carrinho.length === 0) dock.classList.add('translate-y-full');
+            else dock.classList.remove('translate-y-full');
+        }
+    }
+
+    function confirmarItens() {
+        if (carrinho.length === 0) { alert("🛒 Seu carrinho está vazio!"); return; }
+        localStorage.setItem('carrinho_lanchonete', JSON.stringify(carrinho));
+        window.location.href = "/revisar";
+    }
+
+    // ── Helpers de UI ───────────────────────────────────────────────
+    function toggleModal(id) {
+        const modal = document.getElementById(id);
+        if (modal) modal.classList.toggle('hidden');
+    }
+    function mostrarOpcaoTroco() {
+        const secao = document.getElementById('secao-troco');
+        if (secao) secao.classList.toggle('hidden');
+    }
+    function copyPix() {
+        const input = document.getElementById('pix-copia');
+        if (input) {
+            input.select();
+            input.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(input.value);
+            alert("Código PIX copiado!");
+        }
+    }
+</script>

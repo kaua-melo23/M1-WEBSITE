@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cardápio Digital - Lanchonete Express</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Esconde barras de rolagem mas mantém funcionalidade */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        html { scroll-behavior: smooth; }
+        summary { list-style: none; }
+        summary::-webkit-details-marker { display: none; }
+        
+        /* Efeito de carregamento para imagens (Skeleton) */
+        .img-loading { background: #e5e7eb; animate: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    </style>
+</head>
+<body class="bg-gray-100 no-scrollbar pb-32">
+
+    {% include 'Components/_sidebar.html' %}
+    {% include 'Components/_header.html' %}
+
+    <main class="p-4 max-w-lg mx-auto">
+        {% include 'Components/_cardapio.html' %}
+    </main>
+
+    {% include 'Components/_cart_dock.html' %}
+
+    {% include 'Components/_modais.html' %}
+    
+    {% include 'Components/_Scripts.html' %}
+    
+
+    <script>
+        // Lógica de Inicialização Segura
+        window.addEventListener('DOMContentLoaded', () => {
+            // 1. Controle do Dock do Carrinho
+            const dock = document.getElementById('cart-dock');
+            // 'carrinho' deve estar definido no _scripts.html
+            if (typeof carrinho !== 'undefined' && carrinho.length === 0 && dock) {
+                dock.classList.add('translate-y-full');
+            }
+
+            // 2. Carregamento do Cardápio (Opcional se você já renderiza via Flask)
+            // Se o seu _cardapio.html estiver vazio e depender de JS, 
+            // você chamaria uma função carregarCardapio() aqui.
+            console.log("Sistema SQLite iniciado com sucesso.");
+        });
+
+        // Prevenção de quebra: verifica se o carrinho existe antes de operar
+        if (!localStorage.getItem('carrinho_lanchonete')) {
+            localStorage.setItem('carrinho_lanchonete', JSON.stringify([]));
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revisar Pedido - Lanchonete Express</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .metodo-selecionado {
+            border-color: #3b82f6 !important;
+            background-color: #eff6ff !important;
+            border-width: 2px !important;
+        }
+        input::placeholder { color: #cbd5e1; font-weight: 400; }
+        
+        @keyframes bounce-in {
+            0% { transform: scale(0.9); opacity: 0; }
+            70% { transform: scale(1.05); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-bounce-in { animation: bounce-in 0.3s ease-out forwards; }
+    </style>
+</head>
+<body class="bg-gray-100 p-4 pb-32 font-sans">
+
+    <div id="modal-pix" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-6 text-center animate-bounce-in shadow-2xl">
+            <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">⚡</div>
+            <h2 class="text-xl font-black text-gray-800 uppercase italic">Pagamento PIX</h2>
+            <p class="text-gray-500 text-xs mb-2">Expira em: <span id="timer" class="text-red-500 font-bold">04:00</span></p>
+            
+            <div class="flex justify-center mb-4">
+                <img id="qr-code-img" src="" alt="QR Code" class="w-40 h-40 border-4 border-gray-50 rounded-xl shadow-inner">
+            </div>
+
+            <div class="bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl p-4 mb-4">
+                <input type="text" id="pix-copia-cola" readonly class="w-full bg-transparent text-center font-mono text-[9px] text-gray-600 outline-none mb-3 overflow-hidden text-ellipsis">
+                <button onclick="copiarPix()" class="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-blue-700 active:scale-95 transition-all w-full">
+                    Copiar Código PIX
+                </button>
+            </div>
+
+            <div id="status-pagamento" class="flex items-center justify-center gap-2 mb-4">
+                <div class="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                <p class="text-[10px] text-gray-500 font-bold uppercase">Aguardando pagamento...</p>
+            </div>
+
+            <button onclick="cancelarPagamento()" class="text-gray-400 font-bold uppercase text-xs hover:text-red-500 transition-colors">Cancelar Pedido</button>
+        </div>
+    </div>
+
+    <div class="max-w-lg mx-auto">
+        <div class="flex items-center gap-4 mb-6">
+            <a href="/" class="bg-white p-2 rounded-xl shadow-sm text-gray-400">❮</a>
+            <h1 class="text-2xl font-black italic uppercase text-gray-800 tracking-tighter">Revisar Pedido</h1>
+        </div>
+
+        <div id="revisao-itens" class="space-y-4 mb-6"></div>
+
+        <div class="bg-white p-6 rounded-3xl shadow-sm mb-6 border border-blue-100">
+            <h3 class="font-black text-gray-800 mb-4 uppercase text-[10px] tracking-widest flex items-center gap-2">
+                <span class="text-blue-500 text-lg">🚚</span> Dados para Entrega
+            </h3>
+            
+            <div class="space-y-3">
+                <input type="text" id="nome-cliente" placeholder="Seu nome completo" 
+                    class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 font-bold text-gray-700 focus:border-blue-500 outline-none">
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="md:col-span-2">
+                        <select id="select-bairro" onchange="atualizarTotais()" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 font-bold text-gray-700 focus:border-blue-500 outline-none">
+                            <option value="0" data-taxa="0">Selecione seu bairro...</option>
+                            <option value="Outros" data-taxa="0">Outros (Combinar valor com vendedor)</option>
+                        </select>
+                    </div>
+
+                    <input type="text" id="rua" placeholder="Logradouro / Rua" 
+                        class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 font-bold text-gray-700 focus:border-blue-500 outline-none">
+                    
+                    <input type="text" id="numero" placeholder="Nº" 
+                        class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 font-bold text-gray-700 focus:border-blue-500 outline-none">
+                </div>
+
+                <input type="text" id="complemento" placeholder="Complemento (Ex: Apt 102, Bloco A)" 
+                    class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 font-bold text-gray-700 focus:border-blue-500 outline-none">
+
+                <input type="text" id="referencia" placeholder="Ponto de Referência (Ex: Próximo ao mercado)" 
+                    class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 font-bold text-gray-700 focus:border-blue-500 outline-none">
+            </div>
+
+            <div id="info-entrega" class="mt-4 pt-4 border-t border-dashed border-gray-100 flex justify-between text-sm hidden">
+                <span class="text-gray-400 italic">Taxa de entrega:</span>
+                <span id="valor-taxa-exibir" class="font-bold text-blue-600">R$ 0,00</span>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-3xl shadow-sm mb-8">
+            <div class="flex justify-between items-center mb-1">
+                <span class="text-gray-400 font-bold text-[10px] uppercase tracking-wider">Subtotal Itens</span>
+                <span id="subtotal" class="text-gray-600 font-bold">R$ 0,00</span>
+            </div>
+            <div class="flex justify-between items-center font-black pt-2 border-t border-gray-100">
+                <span class="text-gray-800 uppercase text-[10px] tracking-widest">Total Geral</span>
+                <span id="total-revisao" class="text-2xl text-green-700 tracking-tighter">R$ 0,00</span>
+            </div>
+        </div>
+
+        <h3 class="font-bold text-gray-800 mb-4 uppercase text-xs tracking-widest px-2">Escolha o Pagamento:</h3>
+        <div class="grid grid-cols-1 gap-3">
+            <button onclick="selecionarMetodo('PIX', this)" class="metodo-btn p-4 bg-white border-2 border-transparent rounded-2xl flex items-center gap-4 transition-all shadow-sm">
+                <span class="text-2xl">⚡</span>
+                <span class="font-bold text-gray-700">PIX (Gerar código na hora)</span>
+            </button>
+            
+            <button onclick="selecionarMetodo('Dinheiro', this)" class="metodo-btn p-4 bg-white border-2 border-transparent rounded-2xl flex items-center gap-4 transition-all shadow-sm">
+                <span class="text-2xl">💵</span>
+                <span class="font-bold text-gray-700">Dinheiro</span>
+            </button>
+
+            <div id="secao-troco" class="hidden mx-2 p-4 bg-blue-50 border border-blue-100 rounded-2xl transition-all">
+                <p class="text-[10px] font-black uppercase text-blue-400 mb-2">Troco para quanto?</p>
+                <div class="flex items-center bg-white border border-blue-200 rounded-xl p-2">
+                    <span class="font-bold text-blue-300 mr-2 text-sm">R$</span>
+                    <input type="number" id="valor-troco" placeholder="0.00" class="w-full bg-transparent focus:outline-none font-bold text-blue-600">
+                </div>
+            </div>
+            
+            <button onclick="selecionarMetodo('Cartão', this)" class="metodo-btn p-4 bg-white border-2 border-transparent rounded-2xl flex items-center gap-4 transition-all shadow-sm">
+                <span class="text-2xl">💳</span>
+                <span class="font-bold text-gray-700">Cartão (Débito/Crédito)</span>
+            </button>
+        </div>
+
+        <button onclick="enviarPedidoFinal()" class="w-full mt-8 bg-green-600 text-white py-5 rounded-2xl font-black uppercase shadow-xl hover:bg-green-700 active:scale-95 transition-all text-lg">
+            Finalizar Pedido
+        </button>
+    </div>
+
+<script>
+    let metodoEscolhido = '';
+    let taxaEntrega = 0;
+    let carrinho = JSON.parse(localStorage.getItem('carrinho_lanchonete')) || [];
+    let pollingStatus; 
+    let tempoRestante = 240; // 4 minutos
+
+    async function carregarBairros() {
+        try {
+            const response = await fetch('/api/taxas');
+            const taxas = await response.json();
+            const select = document.getElementById('select-bairro');
+            taxas.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.bairro;
+                opt.dataset.taxa = t.taxa;
+                opt.textContent = `${t.bairro} (${t.taxa === 0 ? 'Frete Grátis' : 'Taxa: R$ ' + t.taxa.toFixed(2)})`;
+                select.appendChild(opt);
+            });
+        } catch (err) { console.error("Erro ao carregar taxas:", err); }
+    }
+
+    function atualizarTotais() {
+        const select = document.getElementById('select-bairro');
+        const infoEntrega = document.getElementById('info-entrega');
+        const valorExibir = document.getElementById('valor-taxa-exibir');
+        const selectedOption = select.options[select.selectedIndex];
+        
+        taxaEntrega = parseFloat(selectedOption.dataset.taxa) || 0;
+
+        if (select.value === "Outros") {
+            infoEntrega.classList.remove('hidden');
+            valorExibir.innerText = "A combinar";
+        } else if (select.value !== "0") {
+            infoEntrega.classList.remove('hidden');
+            valorExibir.innerText = taxaEntrega === 0 ? "Grátis" : `R$ ${taxaEntrega.toFixed(2)}`;
+        } else {
+            infoEntrega.classList.add('hidden');
+        }
+        renderizarRevisao();
+    }
+
+    function renderizarRevisao() {
+        const container = document.getElementById('revisao-itens');
+        const select = document.getElementById('select-bairro');
+        let subtotal = 0;
+        
+        if (carrinho.length === 0) {
+            container.innerHTML = `<div class="text-center py-10"><p class="text-gray-400 italic font-bold">Seu carrinho está vazio!</p></div>`;
+            return;
+        }
+
+        container.innerHTML = "";
+        carrinho.forEach((item, index) => {
+            subtotal += item.preco * (item.quantidade || 1);
+            // Monta linha de complementos escolhidos
+            const compsHtml = (item.complementos || []).length > 0
+                ? `<div class="mt-2 space-y-1">${(item.complementos || []).map(c =>
+                    `<div class="flex justify-between text-[11px] text-gray-500">
+                       <span>• ${c.nome}${c.quantidade > 1 ? ' x' + c.quantidade : ''}</span>
+                       ${c.preco_unitario > 0 ? `<span class="text-orange-500 font-bold">+R$ ${(c.preco_unitario * c.quantidade).toFixed(2)}</span>` : '<span class="text-green-500 font-bold">incluso</span>'}
+                     </div>`).join('')}</div>`
+                : '';
+            container.innerHTML += `
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 transition-all">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <p class="font-bold text-gray-800 uppercase text-sm italic tracking-tight">${item.nome}</p>
+                            <p class="text-green-600 font-black text-sm tracking-tighter">R$ ${item.preco.toFixed(2)}</p>
+                        </div>
+                        <button onclick="removerItemRevisao(${index})" class="text-red-300 hover:text-red-500 text-[10px] font-black uppercase">Excluir</button>
+                    </div>
+                    ${compsHtml}
+                    <input type="text" placeholder="Observação (Ex: sem cebola)" onchange="salvarObs(${index}, this.value)" 
+                           value="${item.obs || ''}" class="w-full bg-gray-50 border border-gray-100 rounded-lg p-2 text-[11px] focus:outline-none focus:border-blue-400 italic font-medium mt-2">
+                </div>`;
+        });
+
+        document.getElementById('subtotal').innerText = `R$ ${subtotal.toFixed(2)}`;
+        
+        if (select.value === "Outros") {
+            document.getElementById('total-revisao').innerText = `R$ ${subtotal.toFixed(2)} + frete`;
+        } else {
+            document.getElementById('total-revisao').innerText = `R$ ${(subtotal + taxaEntrega).toFixed(2)}`;
+        }
+    }
+
+    function selecionarMetodo(metodo, elemento) {
+        metodoEscolhido = metodo;
+        document.querySelectorAll('.metodo-btn').forEach(btn => btn.classList.remove('metodo-selecionado'));
+        elemento.classList.add('metodo-selecionado');
+        document.getElementById('secao-troco').classList.toggle('hidden', metodo !== 'Dinheiro');
+    }
+
+    async function enviarPedidoFinal() {
+        const nome = document.getElementById('nome-cliente').value;
+        const bairro = document.getElementById('select-bairro').value;
+        const rua = document.getElementById('rua').value;
+        const numero = document.getElementById('numero').value;
+
+        if (carrinho.length === 0) return alert("Adicione itens!");
+        if (!nome || bairro === "0" || !rua || !numero) return alert("Preencha os dados de entrega!");
+        if (!metodoEscolhido) return alert("Selecione o pagamento!");
+
+        let subtotal = 0;
+        carrinho.forEach(i => subtotal += i.preco * (i.quantidade || 1));
+        const totalCalculado = subtotal + taxaEntrega;
+        const enderecoCompleto = `${rua}, Nº ${numero} - ${bairro}`;
+
+        const dadosPedido = {
+            nome_cliente: nome,
+            bairro: bairro,
+            endereco: enderecoCompleto,
+            total: totalCalculado,
+            total_produtos: subtotal,
+            taxa_entrega: taxaEntrega,
+            metodo: metodoEscolhido,
+            itens_detalhados: carrinho.map(i => ({
+                nome: i.nome + (i.obs ? ` (${i.obs})` : ''),
+                quantidade: 1,
+                preco: i.preco,
+                preco_base: i.preco_base || i.preco,
+                complementos: (i.complementos || [])
+            }))
+        };
+
+        // SE FOR PIX -> LÓGICA DE 4 MINUTOS
+        if (metodoEscolhido === 'PIX') {
+            try {
+                const res = await fetch('/api/pagamento/gerar_pix', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dadosPedido)
+                });
+                const data = await res.json();
+                
+                if (data.pix_copia_cola) {
+                    abrirModalPix(data.pix_copia_cola, data.qr_code_img, data.id_mp);
+                }
+            } catch (e) { alert("Erro ao gerar PIX"); }
+            return;
+        }
+
+        // SE FOR DINHEIRO/CARTÃO -> REGISTRA DIRETO
+        try {
+            const res = await fetch('/api/pedidos/presencial', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dadosPedido)
+            });
+            if (res.ok) {
+                const data = await res.json();
+                const pedidoId = data.id || '?';
+                abrirZap(nome, enderecoCompleto, bairro, subtotal, taxaEntrega, pedidoId);
+            }
+        } catch (e) { alert("Erro ao salvar pedido"); }
+    }
+
+    function abrirModalPix(codigo, qrCodeBase64, idMp) {
+        document.getElementById('pix-copia-cola').value = codigo;
+        document.getElementById('qr-code-img').src = `data:image/png;base64,${qrCodeBase64}`;
+        document.getElementById('modal-pix').classList.remove('hidden');
+        
+        iniciarTimer();
+        
+        // Polling: Verifica se o pagamento foi aprovado no banco a cada 3s
+        pollingStatus = setInterval(async () => {
+            const res = await fetch(`/api/pagamento/status/${idMp}`);
+            const status = await res.json();
+            if (status.pago) {
+                clearInterval(pollingStatus);
+                alert("✅ Pagamento Aprovado! Seu pedido já está sendo preparado.");
+                localStorage.removeItem('carrinho_lanchonete');
+                location.href = "/"; // Ou uma página de sucesso
+            }
+        }, 3000);
+    }
+
+    function iniciarTimer() {
+        tempoRestante = 240;
+        const display = document.getElementById('timer');
+        const contador = setInterval(() => {
+            let m = Math.floor(tempoRestante / 60);
+            let s = tempoRestante % 60;
+            display.innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+            if (tempoRestante <= 0) {
+                clearInterval(contador);
+                clearInterval(pollingStatus);
+                alert("O tempo expirou! Gere um novo código.");
+                location.reload();
+            }
+            tempoRestante--;
+        }, 1000);
+    }
+
+    function abrirZap(nome, endereco, bairro, subtotal, taxa, pedidoId) {
+        const msg = `🔔 *NOVO PEDIDO #${pedidoId}*\n\n👤 *Cliente:* ${nome}\n📍 *Endereço:* ${endereco}\n💰 *Total:* R$ ${(subtotal+taxa).toFixed(2)}\n💳 *Pagamento:* ${metodoEscolhido}\n🆔 *Cód. Pedido:* #${pedidoId}`;
+        localStorage.removeItem('carrinho_lanchonete');
+        window.location.href = `https://wa.me/5581999724758?text=${encodeURIComponent(msg)}`;
+    }
+
+    function copiarPix() {
+        const input = document.getElementById('pix-copia-cola');
+        input.select();
+        navigator.clipboard.writeText(input.value);
+        alert("PIX Copiado!");
+    }
+
+    function cancelarPagamento() {
+        if(confirm("Deseja cancelar a geração deste PIX?")) {
+            location.reload();
+        }
+    }
+
+    function removerItemRevisao(index) {
+        carrinho.splice(index, 1);
+        localStorage.setItem('carrinho_lanchonete', JSON.stringify(carrinho));
+        renderizarRevisao();
+    }
+
+    function salvarObs(index, valor) {
+        carrinho[index].obs = valor;
+        localStorage.setItem('carrinho_lanchonete', JSON.stringify(carrinho));
+    }
+
+    carregarBairros();
+    renderizarRevisao();
+</script>
+</body>
+</html>

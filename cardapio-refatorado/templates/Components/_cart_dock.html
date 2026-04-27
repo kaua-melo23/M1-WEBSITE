@@ -1,0 +1,52 @@
+<div id="cart-dock" class="fixed bottom-0 left-0 w-full bg-white border-t shadow-[0_-10px_25px_rgba(0,0,0,0.1)] rounded-t-[2.5rem] z-50 transform translate-y-full transition-transform duration-500 ease-in-out">
+    
+    <div class="w-10 h-1 bg-gray-100 rounded-full mx-auto mt-3 mb-1"></div>
+
+    <div class="p-5 max-w-lg mx-auto flex justify-between items-center">
+        
+        <div class="flex items-center gap-3">
+            <div class="bg-red-50 p-3 rounded-2xl relative">
+                <span id="cart-count" class="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-black h-5 w-5 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                    0
+                </span>
+                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 11V7a4 4 0 11-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                </svg>
+            </div>
+            
+            <div>
+                <p class="text-gray-400 text-[9px] font-bold uppercase tracking-widest">Seu Pedido</p>
+                <p class="text-xl font-black text-gray-900 leading-none">
+                    <span id="cart-total">R$ 0.00</span>
+                </p>
+                <span id="total-val" class="hidden">0.00</span>
+            </div>
+        </div>
+
+        <button id="btn-confirmar-itens" onclick="confirmarItens()" 
+                class="bg-green-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase shadow-xl active:scale-95 hover:bg-green-700 transition-all flex flex-col items-center leading-none">
+            <span>Ver Carrinho</span>
+            <span class="text-[8px] opacity-70 mt-1 tracking-tighter">Finalizar Pedido</span>
+        </button>
+    </div>
+</div>
+
+<script>
+    /**
+     * Esta função agora apenas valida se há itens e 
+     * redireciona para a página de revisão dedicada.
+     */
+    function confirmarItens() {
+        // 'carrinho' é a variável global gerenciada no _scripts.html
+        if(typeof carrinho === 'undefined' || carrinho.length === 0) {
+            alert("🛒 Adicione pelo menos um item para continuar!");
+            return;
+        }
+        
+        // Salva o estado atual no localStorage antes de mudar de página
+        localStorage.setItem('carrinho_lanchonete', JSON.stringify(carrinho));
+        
+        // Redireciona para a rota definida no run.py
+        window.location.href = "/revisar";
+    }
+</script>

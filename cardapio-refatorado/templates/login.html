@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen px-4">
+    <form method="POST" class="bg-white p-8 rounded-3xl shadow-xl w-full max-w-sm border border-gray-200">
+        <h2 class="text-2xl font-black text-center mb-6 text-red-600 italic">ADMIN LOGIN</h2>
+        {% if erro %}<p class="text-red-500 text-sm mb-4 text-center font-semibold bg-red-50 p-2 rounded-lg border border-red-100">{{ erro }}</p>{% endif %}
+        <div class="space-y-4">
+            <div>
+                <label class="text-xs font-bold text-gray-400 uppercase ml-1">Usuário</label>
+                <input type="text" name="username" placeholder="Seu usuário" class="w-full p-4 mt-1 border border-gray-200 rounded-2xl bg-gray-50 outline-none focus:ring-2 focus:ring-red-500 transition-all" required>
+            </div>
+            <div class="relative">
+                <label class="text-xs font-bold text-gray-400 uppercase ml-1">Senha</label>
+                <div class="relative">
+                    <input id="password-field" type="password" name="password" placeholder="Sua senha" class="w-full p-4 mt-1 border border-gray-200 rounded-2xl bg-gray-50 outline-none focus:ring-2 focus:ring-red-500 transition-all" required>
+                    <button type="button" onclick="togglePassword()" class="absolute right-4 top-1/2 -translate-y-1/2 mt-0.5 text-gray-400 hover:text-red-500 transition-colors">
+                        <svg id="eye-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <button type="submit" class="w-full bg-red-600 text-white p-4 rounded-2xl font-black mt-8 shadow-lg active:scale-95 transition-transform uppercase tracking-wider">Entrar no Painel</button>
+        <a href="/" class="block text-center mt-6 text-gray-400 text-xs font-bold uppercase hover:text-red-500">Voltar ao Cardápio</a>
+    </form>
+    <script>
+        function togglePassword() {
+            const f = document.getElementById('password-field');
+            const i = document.getElementById('eye-icon');
+            if (f.type === 'password') { f.type = 'text'; i.classList.add('text-red-500'); }
+            else { f.type = 'password'; i.classList.remove('text-red-500'); }
+        }
+    </script>
+</body>
+</html>

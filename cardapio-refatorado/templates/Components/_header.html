@@ -1,0 +1,17 @@
+<header id="loja-header" 
+    style="background-color: {{ configs.get('cor_primaria', '#dc2626') }}; color: {{ configs.get('cor_texto_header', '#ffffff') }};"
+    class="text-white p-6 pt-16 shadow-lg text-center rounded-b-[3rem] mb-6 transition-colors duration-500">
+    <div class="max-w-lg mx-auto">
+        {% if configs.get('logo_url') %}
+        <img src="{{ configs['logo_url'] }}" alt="Logo" class="h-16 w-auto mx-auto mb-3 object-contain rounded-xl shadow-md">
+        {% endif %}
+        <h1 class="text-3xl font-black italic uppercase tracking-tighter leading-none">
+            {{ configs.get('nome_lanchonete', 'Lanchonete Express') }}
+        </h1>
+        {% if configs.get('slogan') %}
+        <p class="text-[10px] opacity-90 font-bold uppercase tracking-widest mt-2 italic">
+            {{ configs.get('slogan', '') }}
+        </p>
+        {% endif %}
+    </div>
+</header>

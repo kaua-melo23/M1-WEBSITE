@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atendente — Balcão</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0b0f1a;
+            --surface: #141924;
+            --surface2: #1c2333;
+            --border: #252d3d;
+            --amber: #f59e0b;
+            --amber-dim: #78450a;
+            --green: #22c55e;
+            --blue: #3b82f6;
+            --red: #ef4444;
+            --purple: #a855f7;
+            --text: #e2e8f0;
+            --muted: #64748b;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            background: var(--bg); 
+            color: var(--text); 
+            font-family: 'DM Sans', sans-serif;
+            height: 100vh; 
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .bebas { font-family: 'Bebas Neue', sans-serif; }
+        
+        /* TOPBAR */
+        #topbar {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            z-index: 50;
+        }
+        
+        /* LAYOUT */
+        #main {
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        /* LEFT PANEL */
+        #painel-esquerdo {
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        /* RIGHT PANEL */
+        #painel-direito {
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        /* SEARCH */
+        #busca-input {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 12px;
+            padding: 10px 14px;
+            font-size: 14px;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 600;
+            width: 100%;
+            outline: none;
+            transition: border-color .2s;
+        }
+        #busca-input:focus { border-color: var(--amber); }
+        
+        /* PRODUCT GRID */
+        #grade-produtos {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            overflow-y: auto;
+            padding: 12px;
+            flex: 1;
+        }
+        #grade-produtos::-webkit-scrollbar { width: 4px; }
+        #grade-produtos::-webkit-scrollbar-track { background: transparent; }
+        #grade-produtos::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        
+        .card-produto {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all .15s;
+            position: relative;
+            overflow: hidden;
+        }
+        .card-produto:hover { border-color: var(--amber); background: #1e2740; }
+        .card-produto:active { transform: scale(.97); }
+        .card-produto .cat-badge {
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            color: var(--muted);
+            margin-bottom: 4px;
+        }
+        .card-produto .nome {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1.3;
+            margin-bottom: 6px;
+        }
+        .card-produto .preco {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 20px;
+            color: var(--amber);
+        }
+        .card-produto .add-btn {
+            position: absolute;
+            top: 10px; right: 10px;
+            width: 26px; height: 26px;
+            background: var(--amber);
+            color: #000;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px; font-weight: 900;
+            opacity: 0;
+            transition: opacity .15s;
+        }
+        .card-produto:hover .add-btn { opacity: 1; }
+        
+        /* CARRINHO */
+        #carrinho-lista {
+            overflow-y: auto;
+            max-height: 220px;
+            padding: 0 12px;
+        }
+        #carrinho-lista::-webkit-scrollbar { width: 4px; }
+        #carrinho-lista::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        
+        .item-carrinho {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .item-carrinho:last-child { border-bottom: none; }
+        .item-nome { flex: 1; font-size: 13px; font-weight: 600; color: var(--text); }
+        .item-preco { font-size: 13px; font-weight: 700; color: var(--green); white-space: nowrap; }
+        .qty-btn {
+            width: 26px; height: 26px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-weight: 700; font-size: 14px;
+            transition: background .15s;
+        }
+        .qty-btn:hover { background: var(--border); }
+        .qty-num {
+            width: 24px; text-align: center;
+            font-size: 14px; font-weight: 800; color: var(--amber);
+        }
+        
+        /* METODO PAGAMENTO */
+        .metodo-btn {
+            flex: 1;
+            padding: 8px 4px;
+            border-radius: 10px;
+            border: 2px solid var(--border);
+            background: var(--surface2);
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 700;
+            text-align: center;
+            cursor: pointer;
+            transition: all .15s;
+        }
+        .metodo-btn.ativo {
+            border-color: var(--amber);
+            background: var(--amber-dim);
+            color: var(--amber);
+        }
+        
+        /* BTN LANÇAR */
+        #btn-lancar {
+            background: var(--amber);
+            color: #000;
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 20px;
+            letter-spacing: .05em;
+            border: none;
+            border-radius: 14px;
+            padding: 14px;
+            cursor: pointer;
+            width: 100%;
+            transition: all .15s;
+        }
+        #btn-lancar:hover { background: #fbbf24; transform: translateY(-1px); }
+        #btn-lancar:active { transform: translateY(0); }
+        #btn-lancar:disabled { background: var(--muted); color: var(--surface); cursor: not-allowed; transform: none; }
+        
+        /* KANBAN */
+        #kanban {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            padding: 12px;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        .coluna-kanban {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .coluna-header {
+            padding: 12px 14px 10px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .coluna-titulo {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 15px;
+            letter-spacing: .05em;
+        }
+        .coluna-badge {
+            font-size: 11px;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 20px;
+        }
+        .coluna-body {
+            overflow-y: auto;
+            flex: 1;
+            padding: 10px;
+        }
+        .coluna-body::-webkit-scrollbar { width: 3px; }
+        .coluna-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        
+        /* PEDIDO CARD */
+        .pedido-card {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all .15s;
+        }
+        .pedido-card:hover { border-color: #3d4f6a; }
+        .pedido-num { font-size: 10px; font-weight: 800; color: var(--muted); }
+        .pedido-cliente { font-size: 13px; font-weight: 700; color: var(--text); margin: 2px 0 6px; }
+        .pedido-itens { font-size: 11px; color: #94a3b8; line-height: 1.5; margin-bottom: 8px; }
+        .pedido-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .pedido-total { font-family: 'Bebas Neue', sans-serif; font-size: 17px; color: var(--green); }
+        .pedido-hora { font-size: 10px; font-weight: 700; color: var(--muted); background: var(--surface); padding: 2px 7px; border-radius: 6px; }
+        
+        .acao-btn {
+            width: 100%;
+            padding: 6px;
+            border-radius: 8px;
+            border: none;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: all .15s;
+        }
+        .acao-btn:hover { opacity: .85; }
+        
+        /* COLUNA CORES */
+        .col-pendente .coluna-titulo { color: #facc15; }
+        .col-pendente .coluna-badge { background: #422006; color: #facc15; }
+        .col-pendente { border-top: 3px solid #facc15; }
+        
+        .col-preparo .coluna-titulo { color: #fb923c; }
+        .col-preparo .coluna-badge { background: #431407; color: #fb923c; }
+        .col-preparo { border-top: 3px solid #fb923c; }
+        
+        .col-caminho .coluna-titulo { color: #60a5fa; }
+        .col-caminho .coluna-badge { background: #172554; color: #60a5fa; }
+        .col-caminho { border-top: 3px solid #60a5fa; }
+        
+        .col-feito .coluna-titulo { color: #4ade80; }
+        .col-feito .coluna-badge { background: #052e16; color: #4ade80; }
+        .col-feito { border-top: 3px solid #4ade80; }
+        
+        /* TOAST */
+        #toast {
+            position: fixed;
+            bottom: 24px; left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--green);
+            color: #000;
+            font-weight: 800;
+            font-size: 14px;
+            padding: 12px 24px;
+            border-radius: 14px;
+            z-index: 999;
+            transition: transform .3s;
+        }
+        #toast.show { transform: translateX(-50%) translateY(0); }
+        #toast.erro { background: var(--red); color: #fff; }
+        
+        /* MODAL */
+        #modal-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,.7);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+        }
+        #modal-overlay.open { display: flex; }
+        #modal-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 24px;
+            width: 380px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        /* SCROLL */
+        #kanban::-webkit-scrollbar { display: none; }
+        
+        /* EMPTY STATE */
+        .empty-state {
+            text-align: center;
+            padding: 30px 10px;
+            color: var(--muted);
+        }
+        .empty-state .icon { font-size: 32px; margin-bottom: 8px; }
+        .empty-state .txt { font-size: 12px; font-weight: 600; }
+        
+        /* CATEGORIA TABS */
+        #cat-tabs {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            padding: 10px 12px 6px;
+            flex-shrink: 0;
+        }
+        #cat-tabs::-webkit-scrollbar { display: none; }
+        .cat-tab {
+            padding: 5px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all .15s;
+        }
+        .cat-tab.ativo { background: var(--amber); color: #000; border-color: var(--amber); }
+    </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div id="topbar">
+    <div class="flex items-center gap-3">
+        <span class="bebas text-2xl text-amber-400 tracking-widest">BALCÃO</span>
+        <span class="text-xs font-bold text-slate-500 bg-slate-800 px-2 py-1 rounded-lg uppercase">{{ role }}</span>
+    </div>
+    <div class="flex items-center gap-3">
+        <span id="relogio" class="bebas text-xl text-slate-400 tracking-widest"></span>
+        <span class="text-sm font-bold text-slate-400">{{ usuario_nome }}</span>
+        <a href="/logout" class="text-xs font-bold text-slate-500 hover:text-red-400 transition-colors px-3 py-1 rounded-lg border border-slate-700 hover:border-red-800">Sair</a>
+    </div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+    <!-- ═══════════════════════════════════════════════
+         PAINEL ESQUERDO — LANÇAMENTO DE PEDIDO
+    ═══════════════════════════════════════════════ -->
+    <div id="painel-esquerdo">
+        <!-- BUSCA -->
+        <div style="padding:12px; border-bottom:1px solid var(--border); flex-shrink:0;">
+            <input id="busca-input" type="text" placeholder="🔍 Buscar produto..." oninput="filtrarProdutos(this.value)">
+        </div>
+        
+        <!-- CATEGORIAS -->
+        <div id="cat-tabs">
+            <button class="cat-tab ativo" onclick="filtrarCategoria('todas', this)">Todos</button>
+        </div>
+        
+        <!-- GRADE DE PRODUTOS -->
+        <div id="grade-produtos">
+            <div class="empty-state" style="grid-column:span 2;">
+                <div class="icon">⏳</div>
+                <div class="txt">Carregando produtos...</div>
+            </div>
+        </div>
+        
+        <!-- CARRINHO -->
+        <div style="border-top:1px solid var(--border); flex-shrink:0;">
+            <!-- HEADER CARRINHO -->
+            <div style="padding:10px 12px 6px; display:flex; justify-content:space-between; align-items:center;">
+                <span class="bebas" style="font-size:16px; color:var(--amber); letter-spacing:.05em;">PEDIDO</span>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span id="total-display" class="bebas" style="font-size:22px; color:var(--green);">R$ 0,00</span>
+                    <button onclick="limparCarrinho()" style="font-size:10px; font-weight:800; color:var(--muted); background:none; border:none; cursor:pointer; text-transform:uppercase;">Limpar</button>
+                </div>
+            </div>
+            
+            <!-- ITENS -->
+            <div id="carrinho-lista">
+                <div class="empty-state" style="padding:16px; max-height:none;">
+                    <div class="txt">Nenhum item adicionado</div>
+                </div>
+            </div>
+            
+            <!-- CLIENTE + METODO -->
+            <div style="padding:10px 12px; border-top:1px solid var(--border);">
+                <input id="cliente-nome" type="text" placeholder="👤 Nome do cliente (opcional)"
+                    style="background:var(--surface2); border:1px solid var(--border); color:var(--text); 
+                           border-radius:10px; padding:8px 12px; font-size:13px; font-weight:600;
+                           font-family:'DM Sans',sans-serif; width:100%; outline:none; margin-bottom:8px;">
+                
+                <div style="display:flex; gap:6px; margin-bottom:10px;">
+                    <button class="metodo-btn ativo" data-m="Dinheiro" onclick="selecionarMetodo(this)">💵 Dinheiro</button>
+                    <button class="metodo-btn" data-m="Cartão" onclick="selecionarMetodo(this)">💳 Cartão</button>
+                    <button class="metodo-btn" data-m="PIX" onclick="selecionarMetodo(this)">📱 PIX</button>
+                </div>
+                
+                <button id="btn-lancar" onclick="lancarPedido()" disabled>
+                    LANÇAR PEDIDO
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════
+         PAINEL DIREITO — FILA DE PEDIDOS (KANBAN)
+    ═══════════════════════════════════════════════ -->
+    <div id="painel-direito">
+        <!-- HEADER -->
+        <div style="padding:12px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span class="bebas" style="font-size:18px; color:var(--text); letter-spacing:.05em;">FILA DE PEDIDOS</span>
+                <span style="font-size:11px; font-weight:700; color:var(--green); background:#052e16; padding:3px 9px; border-radius:20px; display:flex; align-items:center; gap:4px;">
+                    <span style="width:6px;height:6px;background:var(--green);border-radius:50%;display:inline-block;animation:pulse 2s infinite;"></span> AO VIVO
+                </span>
+            </div>
+            <button onclick="carregarPedidos()" style="font-size:11px; font-weight:800; color:var(--muted); background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:5px 12px; cursor:pointer;">
+                🔄 Atualizar
+            </button>
+        </div>
+        
+        <!-- KANBAN BOARD -->
+        <div id="kanban">
+            <!-- PENDENTE -->
+            <div class="coluna-kanban col-pendente">
+                <div class="coluna-header">
+                    <span class="coluna-titulo">PENDENTE</span>
+                    <span class="coluna-badge" id="cnt-pendente">0</span>
+                </div>
+                <div class="coluna-body" id="col-pendente-body"></div>
+            </div>
+            <!-- PREPARANDO -->
+            <div class="coluna-kanban col-preparo">
+                <div class="coluna-header">
+                    <span class="coluna-titulo">PREPARANDO</span>
+                    <span class="coluna-badge" id="cnt-preparo">0</span>
+                </div>
+                <div class="coluna-body" id="col-preparo-body"></div>
+            </div>
+            <!-- A CAMINHO -->
+            <div class="coluna-kanban col-caminho">
+                <div class="coluna-header">
+                    <span class="coluna-titulo">DESPACHADO</span>
+                    <span class="coluna-badge" id="cnt-caminho">0</span>
+                </div>
+                <div class="coluna-body" id="col-caminho-body"></div>
+            </div>
+            <!-- FINALIZADO -->
+            <div class="coluna-kanban col-feito">
+                <div class="coluna-header">
+                    <span class="coluna-titulo">FINALIZADO</span>
+                    <span class="coluna-badge" id="cnt-feito">0</span>
+                </div>
+                <div class="coluna-body" id="col-feito-body"></div>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /main -->
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- MODAL DETALHE -->
+<div id="modal-overlay">
+    <div id="modal-box">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <span class="bebas" id="modal-titulo" style="font-size:20px; color:var(--amber); letter-spacing:.05em;">PEDIDO</span>
+            <button onclick="fecharModal()" style="color:var(--muted); background:none; border:none; cursor:pointer; font-size:20px;">✕</button>
+        </div>
+        <div id="modal-conteudo"></div>
+        <div id="modal-acoes" style="margin-top:16px; display:flex; flex-direction:column; gap:8px;"></div>
+    </div>
+</div>
+
+<style>
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+</style>
+
+<script>
+// ── ESTADO ──────────────────────────────────────────────────────
+const PERMISSOES = {{ permissoes | tojson }};
+const ROLE = "{{ role }}";
+let produtos = [];
+let carrinho = [];
+let metodoAtual = 'Dinheiro';
+let catAtual = 'todas';
+let pedidosFila = [];
+let modalPedidoId = null;
+
+// ── RELÓGIO ─────────────────────────────────────────────────────
+function atualizarRelogio() {
+    const now = new Date();
+    document.getElementById('relogio').textContent = 
+        now.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+}
+setInterval(atualizarRelogio, 1000);
+atualizarRelogio();
+
+// ── TOAST ────────────────────────────────────────────────────────
+function toast(msg, tipo='ok') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = tipo === 'erro' ? 'erro show' : 'show';
+    setTimeout(() => t.className = '', 2500);
+}
+
+// ── PRODUTOS ─────────────────────────────────────────────────────
+async function carregarProdutos() {
+    try {
+        const r = await fetch('/api/atendente/produtos');
+        produtos = await r.json();
+        construirCatTabs();
+        renderizarProdutos(produtos);
+    } catch(e) {
+        document.getElementById('grade-produtos').innerHTML = 
+            '<div class="empty-state" style="grid-column:span 2;"><div class="icon">❌</div><div class="txt">Erro ao carregar produtos</div></div>';
+    }
+}
+
+function construirCatTabs() {
+    const cats = [...new Set(produtos.map(p => p.categoria).filter(Boolean))];
+    const tabs = document.getElementById('cat-tabs');
+    tabs.innerHTML = '<button class="cat-tab ativo" onclick="filtrarCategoria(\'todas\', this)">Todos</button>';
+    cats.forEach(c => {
+        const btn = document.createElement('button');
+        btn.className = 'cat-tab';
+        btn.textContent = c;
+        btn.onclick = function() { filtrarCategoria(c, this); };
+        tabs.appendChild(btn);
+    });
+}
+
+function filtrarCategoria(cat, el) {
+    catAtual = cat;
+    document.querySelectorAll('.cat-tab').forEach(b => b.classList.remove('ativo'));
+    el.classList.add('ativo');
+    const busca = document.getElementById('busca-input').value;
+    filtrarProdutos(busca);
+}
+
+function filtrarProdutos(busca) {
+    let lista = produtos;
+    if (catAtual !== 'todas') lista = lista.filter(p => p.categoria === catAtual);
+    if (busca) lista = lista.filter(p => p.nome.toLowerCase().includes(busca.toLowerCase()));
+    renderizarProdutos(lista);
+}
+
+function renderizarProdutos(lista) {
+    const grade = document.getElementById('grade-produtos');
+    if (!lista.length) {
+        grade.innerHTML = '<div class="empty-state" style="grid-column:span 2;"><div class="icon">🔍</div><div class="txt">Nenhum produto encontrado</div></div>';
+        return;
+    }
+    grade.innerHTML = lista.map(p => `
+        <div class="card-produto" onclick="adicionarItem(${p.id}, '${p.nome.replace(/'/g,"\\'")}', ${p.preco})">
+            <div class="cat-badge">${p.categoria || ''}</div>
+            <div class="nome">${p.nome}</div>
+            <div class="preco">R$ ${p.preco.toFixed(2).replace('.', ',')}</div>
+            <div class="add-btn">+</div>
+        </div>
+    `).join('');
+}
+
+// ── CARRINHO ─────────────────────────────────────────────────────
+function adicionarItem(id, nome, preco) {
+    const existing = carrinho.find(i => i.id === id);
+    if (existing) {
+        existing.quantidade++;
+    } else {
+        carrinho.push({ id, nome, preco, quantidade: 1 });
+    }
+    renderizarCarrinho();
+    // Feedback visual rápido
+    const btn = document.getElementById('btn-lancar');
+    btn.textContent = '+ ' + nome.substring(0, 20);
+    btn.style.background = '#22c55e';
+    setTimeout(() => {
+        btn.textContent = 'LANÇAR PEDIDO';
+        btn.style.background = '';
+    }, 600);
+}
+
+function mudarQtd(id, delta) {
+    const idx = carrinho.findIndex(i => i.id === id);
+    if (idx === -1) return;
+    carrinho[idx].quantidade += delta;
+    if (carrinho[idx].quantidade <= 0) carrinho.splice(idx, 1);
+    renderizarCarrinho();
+}
+
+function limparCarrinho() {
+    carrinho = [];
+    renderizarCarrinho();
+}
+
+function renderizarCarrinho() {
+    const lista = document.getElementById('carrinho-lista');
+    const total = carrinho.reduce((s, i) => s + i.preco * i.quantidade, 0);
+    document.getElementById('total-display').textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
+    
+    const btn = document.getElementById('btn-lancar');
+    btn.disabled = carrinho.length === 0;
+
+    if (!carrinho.length) {
+        lista.innerHTML = '<div class="empty-state" style="padding:16px; max-height:none;"><div class="txt">Nenhum item adicionado</div></div>';
+        return;
+    }
+    lista.innerHTML = carrinho.map(i => `
+        <div class="item-carrinho">
+            <div class="item-nome">${i.nome}</div>
+            <div style="display:flex; align-items:center; gap:4px;">
+                <button class="qty-btn" onclick="mudarQtd(${i.id}, -1)">−</button>
+                <span class="qty-num">${i.quantidade}</span>
+                <button class="qty-btn" onclick="mudarQtd(${i.id}, 1)">+</button>
+            </div>
+            <div class="item-preco">R$ ${(i.preco * i.quantidade).toFixed(2).replace('.', ',')}</div>
+        </div>
+    `).join('');
+}
+
+function selecionarMetodo(el) {
+    document.querySelectorAll('.metodo-btn').forEach(b => b.classList.remove('ativo'));
+    el.classList.add('ativo');
+    metodoAtual = el.dataset.m;
+}
+
+// ── LANÇAR PEDIDO ─────────────────────────────────────────────────
+async function lancarPedido() {
+    if (!carrinho.length) return;
+    const btn = document.getElementById('btn-lancar');
+    btn.disabled = true;
+    btn.textContent = 'ENVIANDO...';
+    
+    try {
+        const r = await fetch('/api/atendente/pedido', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                cliente_nome: document.getElementById('cliente-nome').value || 'Balcão',
+                itens: carrinho.map(i => ({ nome: i.nome, preco: i.preco, quantidade: i.quantidade })),
+                metodo_pagamento: metodoAtual,
+                aceitar_automatico: false
+            })
+        });
+        const d = await r.json();
+        if (d.ok) {
+            toast(`✅ Pedido #${d.pedido_id} lançado!`);
+            carrinho = [];
+            document.getElementById('cliente-nome').value = '';
+            renderizarCarrinho();
+            setTimeout(carregarPedidos, 500);
+        } else {
+            toast('❌ ' + (d.erro || 'Erro desconhecido'), 'erro');
+        }
+    } catch(e) {
+        toast('❌ Erro de conexão', 'erro');
+    }
+    
+    btn.textContent = 'LANÇAR PEDIDO';
+    btn.disabled = carrinho.length === 0;
+}
+
+// ── FILA DE PEDIDOS ───────────────────────────────────────────────
+const STATUS_MAP = {
+    'Pendente':    { col: 'pendente', next: { label: '✅ Aceitar', status: 'Preparando', color: '#f59e0b', perm: 'aceitar_pedidos' } },
+    'Preparando':  { col: 'preparo',  next: { label: '📦 Pronto',  status: 'Preparado',  color: '#8b5cf6', perm: 'preparar_pedidos' } },
+    'Preparado':   { col: 'preparo',  next: { label: '🛵 Despachar', status: 'A Caminho', color: '#3b82f6', perm: 'despachar_pedidos' } },
+    'A Caminho':   { col: 'caminho',  next: { label: '✅ Finalizar', status: 'Finalizado', color: '#22c55e', perm: 'finalizar_pedidos' } },
+    'Finalizado':  { col: 'feito',    next: null },
+};
+
+async function carregarPedidos() {
+    try {
+        const r = await fetch('/api/atendente/pedidos', { credentials: 'same-origin' });
+        pedidosFila = await r.json();
+        renderizarKanban();
+    } catch(e) { console.error(e); }
+}
+
+function temPermissao(perm) {
+    if (ROLE === 'admin') return true;
+    return PERMISSOES.includes(perm);
+}
+
+function renderizarKanban() {
+    const cols = { pendente: [], preparo: [], caminho: [], feito: [] };
+    const hoje = new Date();
+    const hojeStr = hoje.toDateString();
+    
+    pedidosFila.forEach(p => {
+        const info = STATUS_MAP[p.status];
+        if (!info) return;
+        const data = new Date(p.data_hora || p.data);
+        // Mostrar só do dia de hoje
+        if (data.toDateString() !== hojeStr) {
+            if (info.col !== 'feito') return; // finalizado sempre mostra
+        }
+        cols[info.col].push(p);
+    });
+
+    const cnts = {
+        pendente: document.getElementById('cnt-pendente'),
+        preparo: document.getElementById('cnt-preparo'),
+        caminho: document.getElementById('cnt-caminho'),
+        feito: document.getElementById('cnt-feito'),
+    };
+    
+    Object.entries(cols).forEach(([key, lista]) => {
+        cnts[key].textContent = lista.length;
+        const body = document.getElementById('col-' + key + '-body');
+        if (!lista.length) {
+            body.innerHTML = '<div class="empty-state"><div class="icon">🎉</div><div class="txt">Sem pedidos</div></div>';
+            return;
+        }
+        body.innerHTML = lista.map(p => {
+            const info = STATUS_MAP[p.status];
+            const hora = formatarHora(p.data_hora || p.data);
+            const total = parseFloat(p.total_geral || p.total || 0).toFixed(2).replace('.', ',');
+            const itens = (p.itens||[]).map(i => `${i.quantidade}x ${i.produto_nome}`).join(', ');
+            const cliente = p.cliente_nome || p.cliente || 'Balcão';
+            
+            let acaoBtns = '';
+            if (info && info.next) {
+                const n = info.next;
+                const podeAcionar = temPermissao(n.perm);
+                acaoBtns = `<button class="acao-btn" 
+                    style="background:${podeAcionar ? n.color : 'var(--surface)'}; color:${podeAcionar ? '#000' : 'var(--muted)'};"
+                    onclick="event.stopPropagation(); mudarStatus(${p.id}, '${n.status}')"
+                    ${podeAcionar ? '' : 'disabled title="Sem permissão"'}
+                >${n.label}</button>`;
+            }
+            
+            return `<div class="pedido-card" onclick="abrirModal(${p.id})">
+                <div class="pedido-num">#${String(p.id).padStart(4,'0')} · ${p.status}</div>
+                <div class="pedido-cliente">${cliente}</div>
+                <div class="pedido-itens">${itens || 'Sem itens'}</div>
+                <div class="pedido-footer">
+                    <span class="pedido-total">R$ ${total}</span>
+                    <span class="pedido-hora">${hora}</span>
+                </div>
+                ${acaoBtns}
+            </div>`;
+        }).join('');
+    });
+}
+
+function formatarHora(dh) {
+    if (!dh) return '--:--';
+    const p = (dh + '').includes(' ') ? dh.split(' ') : dh.split('T');
+    return p[1] ? p[1].slice(0,5) : '--:--';
+}
+
+async function mudarStatus(id, novoStatus) {
+    try {
+        const r = await fetch(`/api/atendente/pedido/${id}/status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ status: novoStatus })
+        });
+        const d = await r.json();
+        if (d.ok) {
+            toast('✅ Status atualizado!');
+            setTimeout(carregarPedidos, 300);
+        } else {
+            toast('❌ ' + (d.erro || 'Erro'), 'erro');
+        }
+    } catch(e) {
+        toast('❌ Erro de conexão', 'erro');
+    }
+}
+
+// ── MODAL DETALHE ─────────────────────────────────────────────────
+function abrirModal(id) {
+    const p = pedidosFila.find(x => x.id == id);
+    if (!p) return;
+    modalPedidoId = id;
+    document.getElementById('modal-titulo').textContent = `PEDIDO #${String(id).padStart(4,'0')}`;
+    
+    const itensHtml = (p.itens||[]).map(i => `
+        <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--border);">
+            <span style="font-size:13px; font-weight:600;">${i.quantidade}x ${i.produto_nome}</span>
+            <span style="font-size:13px; font-weight:700; color:var(--green);">R$ ${(i.preco_unitario*i.quantidade).toFixed(2).replace('.',',')}</span>
+        </div>
+    `).join('');
+    
+    const total = parseFloat(p.total_geral || p.total || 0).toFixed(2).replace('.',',');
+    
+    document.getElementById('modal-conteudo').innerHTML = `
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
+            <div style="background:var(--surface2); border-radius:10px; padding:10px;">
+                <div style="font-size:9px; font-weight:800; color:var(--muted); text-transform:uppercase; margin-bottom:3px;">Cliente</div>
+                <div style="font-size:13px; font-weight:700;">${p.cliente_nome || 'Balcão'}</div>
+            </div>
+            <div style="background:var(--surface2); border-radius:10px; padding:10px;">
+                <div style="font-size:9px; font-weight:800; color:var(--muted); text-transform:uppercase; margin-bottom:3px;">Pagamento</div>
+                <div style="font-size:13px; font-weight:700; color:var(--amber);">${p.metodo_pagamento || p.metodo || '—'}</div>
+            </div>
+            <div style="background:var(--surface2); border-radius:10px; padding:10px;">
+                <div style="font-size:9px; font-weight:800; color:var(--muted); text-transform:uppercase; margin-bottom:3px;">Status</div>
+                <div style="font-size:13px; font-weight:700; color:var(--blue);">${p.status}</div>
+            </div>
+            <div style="background:var(--surface2); border-radius:10px; padding:10px;">
+                <div style="font-size:9px; font-weight:800; color:var(--muted); text-transform:uppercase; margin-bottom:3px;">Total</div>
+                <div style="font-size:16px; font-weight:700; color:var(--green); font-family:'Bebas Neue',sans-serif;">R$ ${total}</div>
+            </div>
+        </div>
+        <div style="background:var(--surface2); border-radius:10px; padding:12px;">
+            <div style="font-size:9px; font-weight:800; color:var(--muted); text-transform:uppercase; margin-bottom:8px;">Itens</div>
+            ${itensHtml}
+        </div>
+    `;
+    
+    // Ações disponíveis
+    const info = STATUS_MAP[p.status];
+    const acoes = document.getElementById('modal-acoes');
+    acoes.innerHTML = '';
+    if (info && info.next) {
+        const n = info.next;
+        if (temPermissao(n.perm)) {
+            const btn = document.createElement('button');
+            btn.className = 'acao-btn';
+            btn.style.cssText = `background:${n.color}; color:#000; padding:12px; font-size:14px; border-radius:12px; border:none;`;
+            btn.textContent = n.label;
+            btn.onclick = () => { mudarStatus(id, n.status); fecharModal(); };
+            acoes.appendChild(btn);
+        }
+    }
+    
+    document.getElementById('modal-overlay').classList.add('open');
+}
+
+function fecharModal() {
+    document.getElementById('modal-overlay').classList.remove('open');
+    modalPedidoId = null;
+}
+
+document.getElementById('modal-overlay').onclick = function(e) {
+    if (e.target === this) fecharModal();
+};
+
+// ── INIT ──────────────────────────────────────────────────────────
+carregarProdutos();
+carregarPedidos();
+setInterval(carregarPedidos, 12000); // Atualiza a cada 12s
+</script>
+</body>
+</html>
